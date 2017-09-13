@@ -1,0 +1,8 @@
+source:
+  token: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  endpoint: https://www.XXXXXXXXXXXXXx.org/api/
+  is_super_token: false
+target:
+  token: XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  endpoint: http://XXXXXXXXXXX.dev/redcap/api/
+  is_super_token: true
