@@ -1,13 +1,15 @@
 docstr = """
 redcapcopy
 
-Usage: rccp [-imd] (<config>)
+Usage: rccp [-imdvw] (<config>)
 
 Options:
   -h --help                                     show this message and exit
   -i --initialize                               initialize the target project
   -m --metadata                                 copy metadata
   -d --data                                     copy records
+  -v --verbose                                  log verbosly
+  -w --write-source-metadata                    write metadata from source to file
 
 """
 
@@ -27,9 +29,14 @@ def main(args):
                      config['target']['token'],
                      config['target']['is_super_token'])
 
+    if args.get('--write-source-metadata'):
+        source.write_metadata(config['source']['metadata_path'])
+
     target.copy_project(source,
+                        verbose=args.get('--verbose'),
                         initialize=args.get('--initialize'),
                         pull_metadata=args.get('--metadata'),
+                        metadata_file=config['source']['metadata_path'],
                         pull_data=args.get('--data'))
 
 

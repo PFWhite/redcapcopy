@@ -1,4 +1,5 @@
 import json
+from types import SimpleNamespace
 
 from cappy import API
 
@@ -15,7 +16,7 @@ class Project(object):
             self._api = API(token, endpoint, self.cappy_api_version)
             self.token = token
 
-    def create_project(self, project_csv, is_longitudinal=True):
+    def create_project(self, project_csv, verbose, is_longitudinal=True):
         """
         Used to create a new project, requires a super user token
         """
@@ -26,13 +27,18 @@ class Project(object):
             exit('No _super_api for {}. Did you forget to pass a super token?'.format(self.endpoint))
         try:
             res = api.create_project(data=project_csv)
+            if verbose:
+                print(res.status_code, (res.content if str(res.status_code) != '200' else ''))
             self.token = str(res.content, 'utf-8')
             self._api = API(self.token, self.endpoint, self.cappy_api_version)
             if is_longitudinal:
                 # redcap has a bug when creating longitudinal projects
                 # where it creates an empty event with the name 'event_1_arm_1'
                 self.run_api_call('delete_events', events=['event_1_arm_1'])
-        except:
+                if verbose:
+                    print(res.status_code, (res.content if str(res.status_code) != '200' else ''))
+        except Exception as ex:
+            raise ex
             exit('Project creation failed for {} with token {}'.format(self.endpoint, self.super_token))
 
     def run_api_call(self, method, *args, **kwargs):
@@ -40,27 +46,61 @@ class Project(object):
         print('Running {} on endpoint {}'.format(method, self.endpoint))
         return call(*args, **kwargs)
 
-    def _pipe_data(self, source, data_type, **kwargs):
+    def _batch_records(self, import_method, raw_data, batch_size=1000):
+        import_method += '_overwrite'
+        data = json.loads(str(raw_data, 'utf-8'))
+        batches = [data[i : i + batch_size] for i in range(0, len(data), )]
+        for batch in batches:
+            kwargs['data'] = json.dumps(batch)
+            res_im = self.run_api_call(import_method, **kwargs)
+            if verbose:
+                print('status code: ' + res_im.status_code,
+                        '\n' + (res_im.content if str(res_im.status_code) != '200' else ''))
+
+    def _get_raw_data(self, source, export_method, **kwargs):
+        """
+        Returns the export response or a mock with local file system data
+        """
+        if kwargs.get('data_file'):
+            print('Using data file at {data_file} for {export_method}'.format(export_method=export_method, **kwargs))
+            file_path = kwargs.get('data_file')
+            with open(file_path, 'rb') as data_file:
+                res_ex = SimpleNamespace()
+                res_ex.status_code = 200
+                res_ex.content = data_file.read()
+            del kwargs['data_file']
+        else:
+            res_ex = source.run_api_call(export_method, **kwargs)
+            raw_data = res_ex.content
+        return res_ex
+
+
+    def _pipe_data(self, source, data_type, verbose, **kwargs):
         """
         Pipes the data from one project to the next. Can only be used with api calls that
         dont require super user permissions
+
+        Can be used with a data file instead of calling from a server
         """
         export_method = 'export_' + data_type
         import_method = 'import_' + data_type
-        res_ex = source.run_api_call(export_method, **kwargs)
+        res_ex = self._get_raw_data(source, export_method, **kwargs)
+        if verbose and not kwargs.get('data_file'):
+            print(res_ex.status_code, (res_ex.content if str(res_ex.status_code) != '200' else ''))
         if data_type == 'records':
-            import_method += '_overwrite'
-            data = json.loads(str(res.content, 'utf-8'))
-            step = 1000
-            batches = [data[i : i + step] for i in range(0, len(data), step)]
-            for batch in batches:
-                kwargs['data'] = json.dumps(batch)
-                res_im = self.run_api_call(import_method, **kwargs)
+            self.batch_records(import_records, raw_data)
         else:
             kwargs['data'] = res_ex.content
             res_im = self.run_api_call(import_method, **kwargs)
+            if verbose:
+                print(res_im.status_code, (res_im.content if str(res_im.status_code) != '200' else ''))
 
-    def copy_project(self, source, initialize=True, pull_metadata=True, pull_data=True):
+    def copy_project(self, source,
+                     verbose=False,
+                     initialize=True,
+                     pull_metadata=True,
+                     metadata_file=None,
+                     pull_data=True):
         """
         When passed an instance of a project, will copy metadata and data
         if their respective flags are turned on.
@@ -69,15 +109,21 @@ class Project(object):
             res = source.run_api_call('export_project_info', adhoc_redcap_options={
                 'format': 'csv'
             })
-            self.create_project(res.content)
+            self.create_project(res.content, verbose)
 
         if pull_metadata:
-            self._pipe_data(source, 'metadata')
-            self._pipe_data(source, 'events')
-            self._pipe_data(source, 'arms')
-            self._pipe_data(source, 'instrument_event_mapping')
+            self._pipe_data(source, 'metadata', verbose, data_file=metadata_file)
+            self._pipe_data(source, 'events', verbose)
+            self._pipe_data(source, 'arms', verbose)
+            self._pipe_data(source, 'instrument_event_mapping', verbose)
 
         if pull_data:
-            self._pipe_data(source, 'records')
+            self._pipe_data(source, 'records', verbose)
 
+        if not (initialize or pull_metadata or pull_data):
+            exit('Nothing was copied. Make sure to specify with command flags what you want to copy.')
 
+    def write_metadata(self, path):
+        with open(path, 'wb') as mfile:
+            res = self.run_api_call('export_metadata')
+            mfile.write(res.content)
