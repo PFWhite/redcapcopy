@@ -37,7 +37,8 @@ def main(args):
                         initialize=args.get('--initialize'),
                         pull_metadata=args.get('--metadata'),
                         metadata_file=config['source']['metadata_path'],
-                        pull_data=args.get('--data'))
+                        pull_data=args.get('--data'),
+                        record_copy_options=config.get('record_copy_options'))
 
 
 def cli_run():

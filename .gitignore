@@ -1,4 +1,5 @@
 venv
 *config.yaml
+*dev.yaml
 *.pyc
 *.egg-info*

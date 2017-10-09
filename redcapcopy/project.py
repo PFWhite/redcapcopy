@@ -46,7 +46,7 @@ class Project(object):
         print('Running {} on endpoint {}'.format(method, self.endpoint))
         return call(*args, **kwargs)
 
-    def _batch_records(self, import_method, raw_data, batch_size=1000):
+    def _batch_records(self, import_method, raw_data, verbose=False, batch_size=1000, **kwargs):
         import_method += '_overwrite'
         data = json.loads(str(raw_data, 'utf-8'))
         batches = [data[i : i + batch_size] for i in range(0, len(data), )]
@@ -54,8 +54,8 @@ class Project(object):
             kwargs['data'] = json.dumps(batch)
             res_im = self.run_api_call(import_method, **kwargs)
             if verbose:
-                print('status code: ' + res_im.status_code,
-                        '\n' + (res_im.content if str(res_im.status_code) != '200' else ''))
+                print('status code: ' + str(res_im.status_code),
+                        '\n' + (str(res_im.content, 'utf-8') if str(res_im.status_code) != '200' else ''))
 
     def _get_raw_data(self, source, export_method, **kwargs):
         """
@@ -88,7 +88,7 @@ class Project(object):
         if verbose and not kwargs.get('data_file'):
             print(res_ex.status_code, (res_ex.content if str(res_ex.status_code) != '200' else ''))
         if data_type == 'records':
-            self.batch_records(import_records, raw_data)
+            self._batch_records(import_method, res_ex.content, verbose, **kwargs)
         else:
             kwargs['data'] = res_ex.content
             res_im = self.run_api_call(import_method, **kwargs)
@@ -100,7 +100,8 @@ class Project(object):
                      initialize=True,
                      pull_metadata=True,
                      metadata_file=None,
-                     pull_data=True):
+                     pull_data=True,
+                     record_copy_options={}):
         """
         When passed an instance of a project, will copy metadata and data
         if their respective flags are turned on.
@@ -118,7 +119,7 @@ class Project(object):
             self._pipe_data(source, 'instrument_event_mapping', verbose)
 
         if pull_data:
-            self._pipe_data(source, 'records', verbose)
+            self._pipe_data(source, 'records', verbose, **record_copy_options)
 
         if not (initialize or pull_metadata or pull_data):
             exit('Nothing was copied. Make sure to specify with command flags what you want to copy.')
