@@ -30,7 +30,7 @@ def main(args):
                      config['target']['is_super_token'])
 
     if args.get('--write-source-metadata'):
-        source.write_metadata(config['source']['metadata_path'])
+        source.write_metadata(config['source'].get('metadata_path'))
 
     target.copy_project(source,
                         verbose=args.get('--verbose'),
