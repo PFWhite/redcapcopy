@@ -2,6 +2,7 @@ docstr = """
 redcapcopy
 
 Usage: rccp [-imdvw] (<config>)
+rccp [-imdvw] (<source_token> <source_endpoint> <target_token> <target_endpoint>) [-m <metadata_path>]
 
 Options:
   -h --help                                     show this message and exit
@@ -19,8 +20,21 @@ import yaml
 from redcapcopy.project import Project
 
 def main(args):
-    with open(args.get('<config>'), 'r') as config_file:
-        config = yaml.load(config_file)
+    if args.get('<config>'):
+        with open(args.get('<config>'), 'r') as config_file:
+            config = yaml.load(config_file)
+    else:
+        config = {
+            'source': {
+                'token': args.get('<source_token>'),
+                'endpoint': args.get('<source_endpoint>'),
+                'metadata_path': args.get('<metadata_path>'),
+            },
+            'target': {
+                'token': args.get('<target_token>'),
+                'endpoint': args.get('<target_endpoint>'),
+            }
+        }
 
     source = Project(config['source']['endpoint'],
                      config['source']['token'])
