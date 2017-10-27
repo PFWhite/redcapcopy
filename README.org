@@ -1,0 +1,30 @@
+* REDCapcopy
+redcapcopy is a tool that helps in copying redcap projects from one location to another.
+It is able to copy both metadata and data for longitudinal projects as well as bootstrap a
+totally new project if provided a superuser token.
+* Usage
+- Clone this repo
+- Install requirements
+- Install redcapcopy using pip
+- Write a config along the lines of redcapcopy/example_config.yaml
+- run rccp with the correct flags
+** rccp run flags
+Options:
+
+  -h --help                                     show this message and exit
+  -i --initialize                               initialize the target project
+  -m --metadata                                 copy metadata
+  -d --data                                     copy records
+  -v --verbose                                  log verbosly
+  -w --write-source-metadata                    write metadata from source to file
+
+** Caveats
+Note that the initialize flag only works when providing a super user token
+for the target project.
+Further, if the run fails or is canceled after intialization, and you want to
+copy either metadata or data to the same project, you will have to add the new token
+to the config file and change the 'is super token' flag to false.
+
+Also be aware that when trying to copy data, if your project is large, you may run
+into redcap not accepting all of your data. This can be combatted by batching and 
+metering to give the redcap server time to think.
