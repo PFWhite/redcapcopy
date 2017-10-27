@@ -3,13 +3,15 @@ from types import SimpleNamespace
 
 from cappy import API
 
+from redcapcopy.util import is_super_token
+
 class Project(object):
 
-    def __init__(self, endpoint, token, is_super_token=True):
+    def __init__(self, endpoint, token):
         self.cappy_super_version = 'v6.16.0.redi_ready.json'
         self.cappy_api_version = 'master.yaml'
         self.endpoint = endpoint
-        if is_super_token:
+        if is_super_token(token):
             self._super_api = API(token, endpoint, self.cappy_super_version)
             self.super_token = token
         else:
@@ -113,9 +115,10 @@ class Project(object):
             self.create_project(res.content, verbose)
 
         if pull_metadata:
+            # the order of these is super important. Dont change
             self._pipe_data(source, 'metadata', verbose, data_file=metadata_file)
-            self._pipe_data(source, 'events', verbose)
             self._pipe_data(source, 'arms', verbose)
+            self._pipe_data(source, 'events', verbose)
             self._pipe_data(source, 'instrument_event_mapping', verbose)
 
         if pull_data:

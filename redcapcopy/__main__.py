@@ -23,20 +23,22 @@ def main(args):
         config = yaml.load(config_file)
 
     source = Project(config['source']['endpoint'],
-                     config['source']['token'],
-                     config['source']['is_super_token'])
+                     config['source']['token'])
     target = Project(config['target']['endpoint'],
-                     config['target']['token'],
-                     config['target']['is_super_token'])
+                     config['target']['token'])
 
+    metadata_path = config['source'].get('metadata_path')
     if args.get('--write-source-metadata'):
-        source.write_metadata(config['source'].get('metadata_path'))
+        if not metadata_path:
+            exit("Please provide a metadata_path parameter in the config file to write to")
+        else:
+            source.write_metadata(metadata_path)
 
     target.copy_project(source,
                         verbose=args.get('--verbose'),
                         initialize=args.get('--initialize'),
                         pull_metadata=args.get('--metadata'),
-                        metadata_file=config['source']['metadata_path'],
+                        metadata_file=metadata_path,
                         pull_data=args.get('--data'),
                         record_copy_options=config.get('record_copy_options'))
 
