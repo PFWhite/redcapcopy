@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from cappy import API
 
-from redcapcopy.util import is_super_token
+from redcapcopy.util import is_super_token, change_project_title
 
 class Project(object):
 
@@ -18,7 +18,7 @@ class Project(object):
             self._api = API(token, endpoint, self.cappy_api_version)
             self.token = token
 
-    def create_project(self, project_csv, verbose, is_longitudinal=True):
+    def create_project(self, project_csv, verbose, is_longitudinal=True, project_title=None):
         """
         Used to create a new project, requires a super user token
         """
@@ -28,6 +28,8 @@ class Project(object):
         except:
             exit('No _super_api for {}. Did you forget to pass a super token?'.format(self.endpoint))
         try:
+            if project_name:
+                data = change_project_title(data, project_title)
             res = api.create_project(data=project_csv)
             if verbose:
                 print(res.status_code, (res.content if str(res.status_code) != '200' else ''))
@@ -102,6 +104,7 @@ class Project(object):
                      initialize=True,
                      pull_metadata=True,
                      metadata_file=None,
+                     project_title=None,
                      pull_data=True,
                      record_copy_options={}):
         """
@@ -112,7 +115,7 @@ class Project(object):
             res = source.run_api_call('export_project_info', adhoc_redcap_options={
                 'format': 'csv'
             })
-            self.create_project(res.content, verbose)
+            self.create_project(res.content, verbose, project_title=project_title)
 
         if pull_metadata:
             # the order of these is super important. Dont change
